@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { pool } from './db.js';
-import { sendInvoiceEmail, sendReceiptEmail } from './email.js';
+import { sendInvoiceEmail, sendReceiptEmail, testEmailConnection } from './email.js';
 
 export const app = express();
 app.use(cors());
@@ -278,7 +278,7 @@ app.post('/api/invoices/:id/send-email', async (req, res) => {
     const invoice = dbToInvoice(invRows[0]);
     const client = dbToClient(clientRows[0]);
     if (!client.email) return res.status(400).json({ error: 'Client has no email address' });
-    await sendInvoiceEmail({
+    const info = await sendInvoiceEmail({
       invoiceNumber: invoice.invoiceNumber,
       clientName: client.name,
       clientEmail: client.email,
@@ -289,7 +289,13 @@ app.post('/api/invoices/:id/send-email', async (req, res) => {
       total: invoice.total,
       notes: invoice.notes,
     });
-    res.json({ success: true, message: `Invoice emailed to ${client.email}` });
+    res.json({
+      success: true,
+      message: `Invoice emailed to ${client.email}`,
+      accepted: info.accepted,
+      rejected: info.rejected,
+      messageId: info.messageId,
+    });
   } catch (err: any) {
     console.error('Failed to send invoice email:', err);
     res.status(500).json({ error: err.message || 'Failed to send email' });
@@ -357,7 +363,7 @@ app.post('/api/receipts/:id/send-email', async (req, res) => {
     const invoice = dbToInvoice(invRows[0]);
     const client = dbToClient(clientRows[0]);
     if (!client.email) return res.status(400).json({ error: 'Client has no email address' });
-    await sendReceiptEmail({
+    const info = await sendReceiptEmail({
       receiptNumber: receipt.receiptNumber,
       invoiceNumber: invoice.invoiceNumber,
       clientName: client.name,
@@ -367,11 +373,22 @@ app.post('/api/receipts/:id/send-email', async (req, res) => {
       paymentDate: receipt.paymentDate,
       notes: receipt.notes,
     });
-    res.json({ success: true, message: `Receipt emailed to ${client.email}` });
+    res.json({
+      success: true,
+      message: `Receipt emailed to ${client.email}`,
+      accepted: info.accepted,
+      rejected: info.rejected,
+      messageId: info.messageId,
+    });
   } catch (err: any) {
     console.error('Failed to send receipt email:', err);
     res.status(500).json({ error: err.message || 'Failed to send email' });
   }
+});
+
+app.get('/api/email/test', async (_req, res) => {
+  const result = await testEmailConnection();
+  res.status(result.ok ? 200 : 500).json(result);
 });
 
 // ─── RECURRING INVOICES ──────────────────────────────────────────────────────

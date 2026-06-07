@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import type { Transporter } from 'nodemailer';
+import type { Transporter, SentMessageInfo } from 'nodemailer';
 
 // ─── Company constants (mirrors src/lib/constants.ts) ────────────────────────
 
@@ -93,7 +93,20 @@ function createTransporter(): Transporter {
     secure: smtp.port === 465,
     auth: { user: smtp.user, pass: smtp.password },
     tls: { rejectUnauthorized: false },
+    logger: false,
+    debug: false,
   });
+}
+
+export async function testEmailConnection(): Promise<{ ok: boolean; detail: string }> {
+  const config = validateEmailEnv();
+  const transporter = createTransporter();
+  try {
+    await transporter.verify();
+    return { ok: true, detail: `SMTP connection verified — ${config.smtp.host}:${config.smtp.port} as ${config.smtp.user}` };
+  } catch (err: any) {
+    return { ok: false, detail: err.message || String(err) };
+  }
 }
 
 // ─── Email data types ────────────────────────────────────────────────────────
@@ -318,24 +331,28 @@ function receiptHtml(data: ReceiptEmailData): string {
 
 // ─── Send functions ──────────────────────────────────────────────────────────
 
-export async function sendInvoiceEmail(data: InvoiceEmailData): Promise<void> {
+export async function sendInvoiceEmail(data: InvoiceEmailData): Promise<SentMessageInfo> {
   const { smtp } = validateEmailEnv();
   const transporter = createTransporter();
-  await transporter.sendMail({
+  const info = await transporter.sendMail({
     from: `"${COMPANY.name}" <${smtp.from}>`,
     to: data.clientEmail,
     subject: `Invoice ${data.invoiceNumber} from ${COMPANY.name}`,
     html: invoiceHtml(data),
   });
+  console.log(`[email] Invoice sent — messageId: ${info.messageId} | accepted: ${info.accepted} | rejected: ${info.rejected}`);
+  return info;
 }
 
-export async function sendReceiptEmail(data: ReceiptEmailData): Promise<void> {
+export async function sendReceiptEmail(data: ReceiptEmailData): Promise<SentMessageInfo> {
   const { smtp } = validateEmailEnv();
   const transporter = createTransporter();
-  await transporter.sendMail({
+  const info = await transporter.sendMail({
     from: `"${COMPANY.name}" <${smtp.from}>`,
     to: data.clientEmail,
     subject: `Payment Receipt ${data.receiptNumber} — ${COMPANY.name}`,
     html: receiptHtml(data),
   });
+  console.log(`[email] Receipt sent — messageId: ${info.messageId} | accepted: ${info.accepted} | rejected: ${info.rejected}`);
+  return info;
 }

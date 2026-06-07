@@ -57,7 +57,7 @@ export const api = {
 
   // Email
   sendInvoiceEmail: (id: string) =>
-    request<{ success: boolean; message: string }>(`/invoices/${id}/send-email`, { method: 'POST' }),
+    request<{ success: boolean; message: string; messageId: string; accepted: string[]; rejected: string[] }>(`/invoices/${id}/send-email`, { method: 'POST' }),
   sendReceiptEmail: (id: string) =>
-    request<{ success: boolean; message: string }>(`/receipts/${id}/send-email`, { method: 'POST' }),
+    request<{ success: boolean; message: string; messageId: string; accepted: string[]; rejected: string[] }>(`/receipts/${id}/send-email`, { method: 'POST' }),
 };

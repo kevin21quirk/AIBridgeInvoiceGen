@@ -78,9 +78,13 @@ export const ViewInvoice: React.FC = () => {
     setSendingEmail(true);
     try {
       const result = await api.sendInvoiceEmail(id);
-      alert(result.message);
+      if (result.rejected && result.rejected.length > 0) {
+        alert(`Email rejected for: ${result.rejected.join(', ')}\nPlease check the client's email address.`);
+      } else {
+        alert(`${result.message}\nMessage ID: ${result.messageId}`);
+      }
     } catch (err: any) {
-      alert(err.message || 'Failed to send email. Please check your email settings.');
+      alert(`Failed to send email:\n${err.message || 'Unknown error'}\n\nCheck that SMTP environment variables are set correctly.`);
     } finally {
       setSendingEmail(false);
     }
