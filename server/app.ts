@@ -164,7 +164,27 @@ app.post('/api/invoices', async (req, res) => {
      upfrontPaid, upfrontPaid ? new Date().toISOString() : null,
      recurringInvoiceId || null]
   );
-  res.json(dbToInvoice(rows[0]));
+  const newInvoice = dbToInvoice(rows[0]);
+  res.json(newInvoice);
+
+  // Fire-and-forget: email invoice to client
+  pool.query('SELECT * FROM clients WHERE id=$1', [newInvoice.clientId])
+    .then(({ rows: cRows }) => {
+      if (cRows.length && cRows[0].email) {
+        return sendInvoiceEmail({
+          invoiceNumber: newInvoice.invoiceNumber,
+          clientName: cRows[0].name,
+          clientEmail: cRows[0].email,
+          issueDate: newInvoice.issueDate,
+          dueDate: newInvoice.dueDate,
+          items: newInvoice.items,
+          subtotal: newInvoice.subtotal,
+          total: newInvoice.total,
+          notes: newInvoice.notes,
+        });
+      }
+    })
+    .catch((err) => console.warn('[email] Auto invoice email failed:', err));
 });
 
 app.put('/api/invoices/:id', async (req, res) => {
@@ -210,6 +230,23 @@ app.patch('/api/invoices/:id/status', async (req, res) => {
          new Date().toISOString().split('T')[0],
          `Payment received for invoice ${invoice.invoiceNumber}`]
       );
+      // Fire-and-forget: email auto-generated receipt to client
+      pool.query('SELECT * FROM clients WHERE id=$1', [invoice.clientId])
+        .then(({ rows: cRows }) => {
+          if (cRows.length && cRows[0].email) {
+            return sendReceiptEmail({
+              receiptNumber,
+              invoiceNumber: invoice.invoiceNumber,
+              clientName: cRows[0].name,
+              clientEmail: cRows[0].email,
+              amount: invoice.total,
+              paymentMethod: 'Bank Transfer',
+              paymentDate: new Date().toISOString().split('T')[0],
+              notes: `Payment received for invoice ${invoice.invoiceNumber}`,
+            });
+          }
+        })
+        .catch((err) => console.warn('[email] Auto receipt email failed:', err));
     }
   }
   res.json(invoice);
@@ -278,7 +315,29 @@ app.post('/api/receipts', async (req, res) => {
     `UPDATE invoices SET status='paid', paid_date=NOW(), updated_at=NOW() WHERE id=$1`,
     [invoiceId]
   );
-  res.json(dbToReceipt(rows[0]));
+  const newReceipt = dbToReceipt(rows[0]);
+  res.json(newReceipt);
+
+  // Fire-and-forget: email receipt to client
+  pool.query('SELECT * FROM invoices WHERE id=$1', [invoiceId])
+    .then(async ({ rows: invRows }) => {
+      if (!invRows.length) return;
+      const inv = dbToInvoice(invRows[0]);
+      const { rows: cRows } = await pool.query('SELECT * FROM clients WHERE id=$1', [invRows[0].client_id]);
+      if (cRows.length && cRows[0].email) {
+        await sendReceiptEmail({
+          receiptNumber: newReceipt.receiptNumber,
+          invoiceNumber: inv.invoiceNumber,
+          clientName: cRows[0].name,
+          clientEmail: cRows[0].email,
+          amount: newReceipt.amount,
+          paymentMethod: newReceipt.paymentMethod,
+          paymentDate: newReceipt.paymentDate,
+          notes: newReceipt.notes,
+        });
+      }
+    })
+    .catch((err) => console.warn('[email] Auto receipt email failed:', err));
 });
 
 app.delete('/api/receipts/:id', async (req, res) => {
