@@ -141,16 +141,16 @@ export const ViewInvoice: React.FC = () => {
         <CardContent>
           <div ref={invoiceRef} className="bg-white p-8">
             <div className="flex items-start justify-between mb-8">
-              <div className="flex items-start gap-4">
+              <div className="flex flex-col gap-3">
                 <img 
                   src={COMPANY_DETAILS.logo} 
-                  alt="Company Logo" 
-                  className="h-16 w-auto object-contain"
+                  alt="AI Bridge Solutions Logo" 
+                  className="h-20 w-auto object-contain"
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
                 <div>
-                  <h1 className="text-4xl font-bold text-primary-600 mb-2">INVOICE</h1>
-                  <p className="text-lg font-semibold text-gray-900">{COMPANY_DETAILS.name}</p>
+                  <h1 className="text-4xl font-bold text-primary-600 mb-1">INVOICE</h1>
+                  <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide">{COMPANY_DETAILS.name}</p>
                 </div>
               </div>
               <div className="text-right">
