@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { pool } from './db.js';
+import { sendInvoiceEmail, sendReceiptEmail } from './email.js';
 
 export const app = express();
 app.use(cors());
@@ -231,6 +232,33 @@ app.delete('/api/invoices/:id', async (req, res) => {
   res.json({ success: true });
 });
 
+app.post('/api/invoices/:id/send-email', async (req, res) => {
+  try {
+    const { rows: invRows } = await pool.query('SELECT * FROM invoices WHERE id=$1', [req.params.id]);
+    if (!invRows.length) return res.status(404).json({ error: 'Invoice not found' });
+    const { rows: clientRows } = await pool.query('SELECT * FROM clients WHERE id=$1', [invRows[0].client_id]);
+    if (!clientRows.length) return res.status(404).json({ error: 'Client not found' });
+    const invoice = dbToInvoice(invRows[0]);
+    const client = dbToClient(clientRows[0]);
+    if (!client.email) return res.status(400).json({ error: 'Client has no email address' });
+    await sendInvoiceEmail({
+      invoiceNumber: invoice.invoiceNumber,
+      clientName: client.name,
+      clientEmail: client.email,
+      issueDate: invoice.issueDate,
+      dueDate: invoice.dueDate,
+      items: invoice.items,
+      subtotal: invoice.subtotal,
+      total: invoice.total,
+      notes: invoice.notes,
+    });
+    res.json({ success: true, message: `Invoice emailed to ${client.email}` });
+  } catch (err: any) {
+    console.error('Failed to send invoice email:', err);
+    res.status(500).json({ error: err.message || 'Failed to send email' });
+  }
+});
+
 // ─── RECEIPTS ────────────────────────────────────────────────────────────────
 
 app.get('/api/receipts', async (_req, res) => {
@@ -256,6 +284,35 @@ app.post('/api/receipts', async (req, res) => {
 app.delete('/api/receipts/:id', async (req, res) => {
   await pool.query('DELETE FROM receipts WHERE id=$1', [req.params.id]);
   res.json({ success: true });
+});
+
+app.post('/api/receipts/:id/send-email', async (req, res) => {
+  try {
+    const { rows: recRows } = await pool.query('SELECT * FROM receipts WHERE id=$1', [req.params.id]);
+    if (!recRows.length) return res.status(404).json({ error: 'Receipt not found' });
+    const { rows: invRows } = await pool.query('SELECT * FROM invoices WHERE id=$1', [recRows[0].invoice_id]);
+    if (!invRows.length) return res.status(404).json({ error: 'Invoice not found' });
+    const { rows: clientRows } = await pool.query('SELECT * FROM clients WHERE id=$1', [invRows[0].client_id]);
+    if (!clientRows.length) return res.status(404).json({ error: 'Client not found' });
+    const receipt = dbToReceipt(recRows[0]);
+    const invoice = dbToInvoice(invRows[0]);
+    const client = dbToClient(clientRows[0]);
+    if (!client.email) return res.status(400).json({ error: 'Client has no email address' });
+    await sendReceiptEmail({
+      receiptNumber: receipt.receiptNumber,
+      invoiceNumber: invoice.invoiceNumber,
+      clientName: client.name,
+      clientEmail: client.email,
+      amount: receipt.amount,
+      paymentMethod: receipt.paymentMethod,
+      paymentDate: receipt.paymentDate,
+      notes: receipt.notes,
+    });
+    res.json({ success: true, message: `Receipt emailed to ${client.email}` });
+  } catch (err: any) {
+    console.error('Failed to send receipt email:', err);
+    res.status(500).json({ error: err.message || 'Failed to send email' });
+  }
 });
 
 // ─── RECURRING INVOICES ──────────────────────────────────────────────────────

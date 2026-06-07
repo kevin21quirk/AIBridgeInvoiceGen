@@ -1,11 +1,12 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Download, Printer } from 'lucide-react';
+import { ArrowLeft, Download, Printer, Mail } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useStore } from '@/store/useStore';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { COMPANY_DETAILS } from '@/lib/constants';
+import { api } from '@/services/api';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -13,6 +14,7 @@ export const ViewReceipt: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { receipts, invoices, clients } = useStore();
   const receiptRef = useRef<HTMLDivElement>(null);
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   const receipt = receipts.find((r) => r.id === id);
   const invoice = receipt ? invoices.find((inv) => inv.id === receipt.invoiceId) : undefined;
@@ -31,6 +33,19 @@ export const ViewReceipt: React.FC = () => {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleEmailReceipt = async () => {
+    if (!receipt) return;
+    setSendingEmail(true);
+    try {
+      const result = await api.sendReceiptEmail(receipt.id);
+      alert(result.message);
+    } catch (err: any) {
+      alert(err.message || 'Failed to send email. Please check your email settings.');
+    } finally {
+      setSendingEmail(false);
+    }
   };
 
   const handleDownloadPDF = async () => {
@@ -83,6 +98,10 @@ export const ViewReceipt: React.FC = () => {
             <Button variant="outline" onClick={handleDownloadPDF}>
               <Download className="mr-2" size={20} />
               Download PDF
+            </Button>
+            <Button variant="outline" onClick={handleEmailReceipt} disabled={sendingEmail}>
+              <Mail className="mr-2" size={20} />
+              {sendingEmail ? 'Sending...' : 'Email to Client'}
             </Button>
           </div>
         </div>

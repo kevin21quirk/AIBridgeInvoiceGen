@@ -54,4 +54,10 @@ export const api = {
     request<{ success: boolean }>(`/recurring-invoices/${id}`, { method: 'DELETE' }),
   generateInvoiceFromRecurring: (id: string, issueDate: string) =>
     request<Invoice>(`/recurring-invoices/${id}/generate`, { method: 'POST', body: JSON.stringify({ issueDate }) }),
+
+  // Email
+  sendInvoiceEmail: (id: string) =>
+    request<{ success: boolean; message: string }>(`/invoices/${id}/send-email`, { method: 'POST' }),
+  sendReceiptEmail: (id: string) =>
+    request<{ success: boolean; message: string }>(`/receipts/${id}/send-email`, { method: 'POST' }),
 };

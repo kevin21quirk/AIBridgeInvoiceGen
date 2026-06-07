@@ -1,12 +1,13 @@
 import React, { useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Download, Printer } from 'lucide-react';
+import { ArrowLeft, Download, Printer, Mail } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/Badge';
 import { useStore } from '@/store/useStore';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { COMPANY_DETAILS } from '@/lib/constants';
+import { api } from '@/services/api';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -16,6 +17,7 @@ export const ViewInvoice: React.FC = () => {
   const { getInvoice, updateInvoiceStatus, updateUpfrontPaymentStatus, receipts } = useStore();
   const invoiceRef = useRef<HTMLDivElement>(null);
   const [markingPaid, setMarkingPaid] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   const invoice = id ? getInvoice(id) : undefined;
   const receipt = id ? receipts.find((r) => r.invoiceId === id) : undefined;
@@ -71,6 +73,19 @@ export const ViewInvoice: React.FC = () => {
     }
   };
 
+  const handleEmailInvoice = async () => {
+    if (!id) return;
+    setSendingEmail(true);
+    try {
+      const result = await api.sendInvoiceEmail(id);
+      alert(result.message);
+    } catch (err: any) {
+      alert(err.message || 'Failed to send email. Please check your email settings.');
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
   const handleUpfrontPaymentToggle = () => {
     if (id) {
       updateUpfrontPaymentStatus(id, !invoice.upfrontPaymentPaid);
@@ -99,6 +114,10 @@ export const ViewInvoice: React.FC = () => {
             <Button variant="outline" onClick={handleDownloadPDF}>
               <Download className="mr-2" size={20} />
               Download PDF
+            </Button>
+            <Button variant="outline" onClick={handleEmailInvoice} disabled={sendingEmail}>
+              <Mail className="mr-2" size={20} />
+              {sendingEmail ? 'Sending...' : 'Email to Client'}
             </Button>
             {invoice.status !== 'paid' && (
               <Button onClick={() => handleStatusChange('paid')} disabled={markingPaid}>
