@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Download, Printer } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
@@ -15,6 +15,7 @@ export const ViewInvoice: React.FC = () => {
   const navigate = useNavigate();
   const { getInvoice, updateInvoiceStatus, updateUpfrontPaymentStatus, receipts } = useStore();
   const invoiceRef = useRef<HTMLDivElement>(null);
+  const [markingPaid, setMarkingPaid] = useState(false);
 
   const invoice = id ? getInvoice(id) : undefined;
   const receipt = id ? receipts.find((r) => r.invoiceId === id) : undefined;
@@ -57,9 +58,16 @@ export const ViewInvoice: React.FC = () => {
     window.print();
   };
 
-  const handleStatusChange = (newStatus: typeof invoice.status) => {
-    if (id) {
-      updateInvoiceStatus(id, newStatus);
+  const handleStatusChange = async (newStatus: typeof invoice.status) => {
+    if (!id) return;
+    if (newStatus === 'paid') setMarkingPaid(true);
+    try {
+      await updateInvoiceStatus(id, newStatus);
+    } catch (err) {
+      console.error('Failed to update invoice status:', err);
+      alert('Failed to update invoice status. Please try again.');
+    } finally {
+      setMarkingPaid(false);
     }
   };
 
@@ -93,8 +101,8 @@ export const ViewInvoice: React.FC = () => {
               Download PDF
             </Button>
             {invoice.status !== 'paid' && (
-              <Button onClick={() => handleStatusChange('paid')}>
-                Mark as Paid
+              <Button onClick={() => handleStatusChange('paid')} disabled={markingPaid}>
+                {markingPaid ? 'Processing...' : 'Mark as Paid'}
               </Button>
             )}
           </div>
