@@ -53,12 +53,12 @@ export const ViewReceipt: React.FC = () => {
 
     try {
       const canvas = await html2canvas(receiptRef.current, {
-        scale: 2,
+        scale: 1.5,
         useCORS: true,
         logging: false,
       });
 
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/jpeg', 0.82);
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
@@ -68,7 +68,7 @@ export const ViewReceipt: React.FC = () => {
       const imgWidth = 210;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
       pdf.save(`${receipt.receiptNumber}.pdf`);
     } catch (error) {
       console.error('Error generating PDF:', error);

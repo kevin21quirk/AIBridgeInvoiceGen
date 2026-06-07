@@ -1,5 +1,7 @@
 import nodemailer from 'nodemailer';
 import type { Transporter, SentMessageInfo } from 'nodemailer';
+import { generateInvoicePdf, generateReceiptPdf } from './pdf.js';
+import type { InvoiceEmailData, ReceiptEmailData } from './pdf.js';
 
 // ─── Company constants (mirrors src/lib/constants.ts) ────────────────────────
 
@@ -109,35 +111,8 @@ export async function testEmailConnection(): Promise<{ ok: boolean; detail: stri
   }
 }
 
-// ─── Email data types ────────────────────────────────────────────────────────
-
-export interface InvoiceEmailData {
-  invoiceNumber: string;
-  clientName: string;
-  clientEmail: string;
-  issueDate: string;
-  dueDate: string;
-  items: Array<{
-    description: string;
-    quantity: number;
-    unitPrice: number;
-    total: number;
-  }>;
-  subtotal: number;
-  total: number;
-  notes?: string;
-}
-
-export interface ReceiptEmailData {
-  receiptNumber: string;
-  invoiceNumber: string;
-  clientName: string;
-  clientEmail: string;
-  amount: number;
-  paymentMethod: string;
-  paymentDate: string;
-  notes?: string;
-}
+// Re-export the types so callers can still import from email.ts
+export type { InvoiceEmailData, ReceiptEmailData };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -334,11 +309,17 @@ function receiptHtml(data: ReceiptEmailData): string {
 export async function sendInvoiceEmail(data: InvoiceEmailData): Promise<SentMessageInfo> {
   const { smtp } = validateEmailEnv();
   const transporter = createTransporter();
+  const pdfBuffer = await generateInvoicePdf(data);
   const info = await transporter.sendMail({
     from: `"${COMPANY.name}" <${smtp.from}>`,
     to: data.clientEmail,
     subject: `Invoice ${data.invoiceNumber} from ${COMPANY.name}`,
     html: invoiceHtml(data),
+    attachments: [{
+      filename: `${data.invoiceNumber}.pdf`,
+      content: pdfBuffer,
+      contentType: 'application/pdf',
+    }],
   });
   console.log(`[email] Invoice sent — messageId: ${info.messageId} | accepted: ${info.accepted} | rejected: ${info.rejected}`);
   return info;
@@ -347,11 +328,17 @@ export async function sendInvoiceEmail(data: InvoiceEmailData): Promise<SentMess
 export async function sendReceiptEmail(data: ReceiptEmailData): Promise<SentMessageInfo> {
   const { smtp } = validateEmailEnv();
   const transporter = createTransporter();
+  const pdfBuffer = await generateReceiptPdf(data);
   const info = await transporter.sendMail({
     from: `"${COMPANY.name}" <${smtp.from}>`,
     to: data.clientEmail,
     subject: `Payment Receipt ${data.receiptNumber} — ${COMPANY.name}`,
     html: receiptHtml(data),
+    attachments: [{
+      filename: `${data.receiptNumber}.pdf`,
+      content: pdfBuffer,
+      contentType: 'application/pdf',
+    }],
   });
   console.log(`[email] Receipt sent — messageId: ${info.messageId} | accepted: ${info.accepted} | rejected: ${info.rejected}`);
   return info;

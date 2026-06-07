@@ -38,17 +38,17 @@ export const ViewInvoice: React.FC = () => {
 
     try {
       const canvas = await html2canvas(invoiceRef.current, {
-        scale: 2,
+        scale: 1.5,
         logging: false,
         useCORS: true,
       });
 
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/jpeg', 0.82);
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
       pdf.save(`${invoice.invoiceNumber}.pdf`);
     } catch (error) {
       console.error('Error generating PDF:', error);
