@@ -282,6 +282,8 @@ app.post('/api/invoices/:id/send-email', async (req, res) => {
       invoiceNumber: invoice.invoiceNumber,
       clientName: client.name,
       clientEmail: client.email,
+      clientCompanyName: client.companyName,
+      clientAddress: client.address,
       issueDate: invoice.issueDate,
       dueDate: invoice.dueDate,
       items: invoice.items,
