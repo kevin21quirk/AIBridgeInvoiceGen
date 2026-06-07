@@ -148,9 +148,9 @@ export const RecurringInvoices: React.FC = () => {
     updateRecurringInvoice(id, { isActive: !currentStatus });
   };
 
-  const handleGenerateInvoice = (recurringId: string) => {
+  const handleGenerateInvoice = async (recurringId: string) => {
     const issueDate = new Date().toISOString().split('T')[0];
-    const invoice = generateInvoiceFromRecurring(recurringId, issueDate);
+    const invoice = await generateInvoiceFromRecurring(recurringId, issueDate);
     if (invoice) {
       navigate(`/invoices/${invoice.id}`);
     } else {

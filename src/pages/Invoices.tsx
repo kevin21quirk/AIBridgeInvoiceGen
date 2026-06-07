@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Plus, Eye, Edit, Trash2, Download } from 'lucide-react';
+import { Plus, Eye, Edit, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
+import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/Badge';
 import { useStore } from '@/store/useStore';

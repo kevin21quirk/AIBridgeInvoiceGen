@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Download, Mail, Printer } from 'lucide-react';
+import { ArrowLeft, Download, Printer } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/Badge';

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Edit, Trash2, Mail, Phone, MapPin } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
+import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';

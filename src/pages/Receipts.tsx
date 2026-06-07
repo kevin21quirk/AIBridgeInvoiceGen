@@ -35,7 +35,6 @@ export const Receipts: React.FC = () => {
       paymentMethod: formData.paymentMethod,
       paymentDate: formData.paymentDate,
       notes: formData.notes || undefined,
-      updatedAt: new Date().toISOString(),
     });
 
     setFormData({
