@@ -215,10 +215,9 @@ app.put('/api/invoices/:id', wrap(async (req, res) => {
 
 app.patch('/api/invoices/:id/status', wrap(async (req, res) => {
   const { status } = req.body;
+  const setPaidDate = status === 'paid' ? ', paid_date=NOW()' : '';
   const { rows } = await pool.query(
-    `UPDATE invoices SET status=$1,
-     paid_date=CASE WHEN $1::text='paid' THEN NOW() ELSE paid_date END,
-     updated_at=NOW() WHERE id=$2 RETURNING *`,
+    `UPDATE invoices SET status=$1${setPaidDate}, updated_at=NOW() WHERE id=$2 RETURNING *`,
     [status, req.params.id]
   );
   if (!rows.length) return res.status(404).json({ error: 'Invoice not found' });
