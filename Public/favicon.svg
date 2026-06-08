@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Blue rounded-square background -->
+  <rect width="32" height="32" rx="6" fill="#0369a1"/>
+
+  <!-- Lighter blue top-left highlight for depth -->
+  <rect width="32" height="32" rx="6" fill="url(#shine)"/>
+
+  <defs>
+    <linearGradient id="shine" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0ea5e9" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#0369a1" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Bridge arch (suspension curve) -->
+  <path d="M4 22 Q16 7 28 22"
+        stroke="white" stroke-width="3" fill="none"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Vertical cables hanging from arch -->
+  <line x1="12" y1="14.6" x2="12" y2="22" stroke="#93c5fd" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="16" y1="11.5" x2="16" y2="22" stroke="#93c5fd" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="20" y1="14.6" x2="20" y2="22" stroke="#93c5fd" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- Bridge deck (road) -->
+  <rect x="2" y="22" width="28" height="2.5" rx="1.25" fill="white"/>
+
+  <!-- Tower pillars -->
+  <rect x="3.5" y="22" width="2.5" height="6.5" rx="1" fill="white"/>
+  <rect x="26" y="22" width="2.5" height="6.5" rx="1" fill="white"/>
+
+  <!-- "AI" label in sky-blue, small, centered above arch -->
+  <text x="16" y="5.5"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="5.5"
+        font-weight="900"
+        fill="#bae6fd"
+        text-anchor="middle"
+        dominant-baseline="middle">AI</text>
+</svg>
