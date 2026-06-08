@@ -5,8 +5,19 @@ let dbReady = false;
 
 export default async function handler(req: any, res: any) {
   if (!dbReady) {
-    await initDb();
-    dbReady = true;
+    try {
+      await initDb();
+      dbReady = true;
+    } catch (err: any) {
+      console.error('[init] DB init error (continuing):', err.message);
+      // Tables may already exist from a previous deploy — continue
+    }
   }
-  app(req, res);
+
+  // Keep the Lambda alive until Express sends the response
+  await new Promise<void>((resolve) => {
+    res.on('finish', resolve);
+    res.on('close', resolve);
+    app(req, res);
+  });
 }

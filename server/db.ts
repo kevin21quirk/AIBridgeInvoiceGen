@@ -6,7 +6,10 @@ const { Pool } = pg;
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false },
-  max: 10,
+  max: 5,
+  connectionTimeoutMillis: 8000,
+  idleTimeoutMillis: 10000,
+  allowExitOnIdle: true,
 });
 
 export async function initDb() {

@@ -7,6 +7,11 @@ export const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Wraps async route handlers so unhandled errors reach the global error handler
+// instead of leaving the request hanging and causing a Vercel 504.
+const wrap = (fn: (req: any, res: any) => Promise<any>) =>
+  (req: any, res: any, next: any) => fn(req, res).catch(next);
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function dbToClient(row: any) {
@@ -98,12 +103,12 @@ async function nextReceiptNumber(): Promise<string> {
 
 // ─── CLIENTS ─────────────────────────────────────────────────────────────────
 
-app.get('/api/clients', async (_req, res) => {
+app.get('/api/clients', wrap(async (_req, res) => {
   const { rows } = await pool.query('SELECT * FROM clients ORDER BY created_at DESC');
   res.json(rows.map(dbToClient));
-});
+}));
 
-app.post('/api/clients', async (req, res) => {
+app.post('/api/clients', wrap(async (req, res) => {
   const { name, companyName, email, phone, address } = req.body;
   const { rows } = await pool.query(
     `INSERT INTO clients (name, company_name, email, phone, has_address, address_line1, address_line2, city, postcode, country)
@@ -113,9 +118,9 @@ app.post('/api/clients', async (req, res) => {
      address?.postcode || null, address?.country || null]
   );
   res.json(dbToClient(rows[0]));
-});
+}));
 
-app.put('/api/clients/:id', async (req, res) => {
+app.put('/api/clients/:id', wrap(async (req, res) => {
   const { name, companyName, email, phone, address } = req.body;
   const { rows } = await pool.query(
     `UPDATE clients SET name=$1, company_name=$2, email=$3, phone=$4, has_address=$5,
@@ -127,21 +132,21 @@ app.put('/api/clients/:id', async (req, res) => {
   );
   if (!rows.length) return res.status(404).json({ error: 'Client not found' });
   res.json(dbToClient(rows[0]));
-});
+}));
 
-app.delete('/api/clients/:id', async (req, res) => {
+app.delete('/api/clients/:id', wrap(async (req, res) => {
   await pool.query('DELETE FROM clients WHERE id=$1', [req.params.id]);
   res.json({ success: true });
-});
+}));
 
 // ─── INVOICES ────────────────────────────────────────────────────────────────
 
-app.get('/api/invoices', async (_req, res) => {
+app.get('/api/invoices', wrap(async (_req, res) => {
   const { rows } = await pool.query('SELECT * FROM invoices ORDER BY created_at DESC');
   res.json(rows.map(dbToInvoice));
-});
+}));
 
-app.post('/api/invoices', async (req, res) => {
+app.post('/api/invoices', wrap(async (req, res) => {
   const { clientId, type, items = [], status = 'draft', issueDate, dueDate,
           notes, requiresUpfrontPayment = false, upfrontPaymentPaid = false,
           recurringInvoiceId } = req.body;
@@ -185,9 +190,9 @@ app.post('/api/invoices', async (req, res) => {
       }
     })
     .catch((err) => console.warn('[email] Auto invoice email failed:', err));
-});
+}));
 
-app.put('/api/invoices/:id', async (req, res) => {
+app.put('/api/invoices/:id', wrap(async (req, res) => {
   const { clientId, type, items, status, issueDate, dueDate, notes, requiresUpfrontPayment } = req.body;
   const subtotal = items ? items.reduce((s: number, i: any) => s + i.total, 0) : null;
   const { rows } = await pool.query(
@@ -206,9 +211,9 @@ app.put('/api/invoices/:id', async (req, res) => {
   );
   if (!rows.length) return res.status(404).json({ error: 'Invoice not found' });
   res.json(dbToInvoice(rows[0]));
-});
+}));
 
-app.patch('/api/invoices/:id/status', async (req, res) => {
+app.patch('/api/invoices/:id/status', wrap(async (req, res) => {
   const { status } = req.body;
   const { rows } = await pool.query(
     `UPDATE invoices SET status=$1,
@@ -250,9 +255,9 @@ app.patch('/api/invoices/:id/status', async (req, res) => {
     }
   }
   res.json(invoice);
-});
+}));
 
-app.patch('/api/invoices/:id/upfront-payment', async (req, res) => {
+app.patch('/api/invoices/:id/upfront-payment', wrap(async (req, res) => {
   const { paid } = req.body;
   const { rows } = await pool.query(
     `UPDATE invoices SET upfront_payment_paid=$1,
@@ -262,14 +267,14 @@ app.patch('/api/invoices/:id/upfront-payment', async (req, res) => {
   );
   if (!rows.length) return res.status(404).json({ error: 'Invoice not found' });
   res.json(dbToInvoice(rows[0]));
-});
+}));
 
-app.delete('/api/invoices/:id', async (req, res) => {
+app.delete('/api/invoices/:id', wrap(async (req, res) => {
   await pool.query('DELETE FROM invoices WHERE id=$1', [req.params.id]);
   res.json({ success: true });
-});
+}));
 
-app.post('/api/invoices/:id/send-email', async (req, res) => {
+app.post('/api/invoices/:id/send-email', wrap(async (req, res) => {
   try {
     const { rows: invRows } = await pool.query('SELECT * FROM invoices WHERE id=$1', [req.params.id]);
     if (!invRows.length) return res.status(404).json({ error: 'Invoice not found' });
@@ -302,16 +307,16 @@ app.post('/api/invoices/:id/send-email', async (req, res) => {
     console.error('Failed to send invoice email:', err);
     res.status(500).json({ error: err.message || 'Failed to send email' });
   }
-});
+}));
 
 // ─── RECEIPTS ────────────────────────────────────────────────────────────────
 
-app.get('/api/receipts', async (_req, res) => {
+app.get('/api/receipts', wrap(async (_req, res) => {
   const { rows } = await pool.query('SELECT * FROM receipts ORDER BY created_at DESC');
   res.json(rows.map(dbToReceipt));
-});
+}));
 
-app.post('/api/receipts', async (req, res) => {
+app.post('/api/receipts', wrap(async (req, res) => {
   const { invoiceId, amount, paymentMethod, paymentDate, notes } = req.body;
   const receiptNumber = await nextReceiptNumber();
   const { rows } = await pool.query(
@@ -346,14 +351,14 @@ app.post('/api/receipts', async (req, res) => {
       }
     })
     .catch((err) => console.warn('[email] Auto receipt email failed:', err));
-});
+}));
 
-app.delete('/api/receipts/:id', async (req, res) => {
+app.delete('/api/receipts/:id', wrap(async (req, res) => {
   await pool.query('DELETE FROM receipts WHERE id=$1', [req.params.id]);
   res.json({ success: true });
-});
+}));
 
-app.post('/api/receipts/:id/send-email', async (req, res) => {
+app.post('/api/receipts/:id/send-email', wrap(async (req, res) => {
   try {
     const { rows: recRows } = await pool.query('SELECT * FROM receipts WHERE id=$1', [req.params.id]);
     if (!recRows.length) return res.status(404).json({ error: 'Receipt not found' });
@@ -386,21 +391,21 @@ app.post('/api/receipts/:id/send-email', async (req, res) => {
     console.error('Failed to send receipt email:', err);
     res.status(500).json({ error: err.message || 'Failed to send email' });
   }
-});
+}));
 
-app.get('/api/email/test', async (_req, res) => {
+app.get('/api/email/test', wrap(async (_req, res) => {
   const result = await testEmailConnection();
   res.status(result.ok ? 200 : 500).json(result);
-});
+}));
 
 // ─── RECURRING INVOICES ──────────────────────────────────────────────────────
 
-app.get('/api/recurring-invoices', async (_req, res) => {
+app.get('/api/recurring-invoices', wrap(async (_req, res) => {
   const { rows } = await pool.query('SELECT * FROM recurring_invoices ORDER BY created_at DESC');
   res.json(rows.map(dbToRecurring));
-});
+}));
 
-app.post('/api/recurring-invoices', async (req, res) => {
+app.post('/api/recurring-invoices', wrap(async (req, res) => {
   const { clientId, type, items = [], amount = 0, dayOfMonth = 1,
           isActive = true, startDate, endDate, notes } = req.body;
   const { rows } = await pool.query(
@@ -410,9 +415,9 @@ app.post('/api/recurring-invoices', async (req, res) => {
      startDate, endDate || null, notes || null]
   );
   res.json(dbToRecurring(rows[0]));
-});
+}));
 
-app.put('/api/recurring-invoices/:id', async (req, res) => {
+app.put('/api/recurring-invoices/:id', wrap(async (req, res) => {
   const { clientId, type, items, amount, dayOfMonth, isActive, startDate, endDate, notes } = req.body;
   const { rows } = await pool.query(
     `UPDATE recurring_invoices SET
@@ -428,14 +433,14 @@ app.put('/api/recurring-invoices/:id', async (req, res) => {
   );
   if (!rows.length) return res.status(404).json({ error: 'Not found' });
   res.json(dbToRecurring(rows[0]));
-});
+}));
 
-app.delete('/api/recurring-invoices/:id', async (req, res) => {
+app.delete('/api/recurring-invoices/:id', wrap(async (req, res) => {
   await pool.query('DELETE FROM recurring_invoices WHERE id=$1', [req.params.id]);
   res.json({ success: true });
-});
+}));
 
-app.post('/api/recurring-invoices/:id/generate', async (req, res) => {
+app.post('/api/recurring-invoices/:id/generate', wrap(async (req, res) => {
   const { issueDate } = req.body;
   const { rows: rRows } = await pool.query(
     'SELECT * FROM recurring_invoices WHERE id=$1', [req.params.id]
@@ -461,4 +466,13 @@ app.post('/api/recurring-invoices/:id/generate', async (req, res) => {
      recurring.notes || null, req.params.id]
   );
   res.json(dbToInvoice(rows[0]));
+}));
+
+// ─── Global error handler ─────────────────────────────────────────────────────
+// Catches any unhandled async error in a route so the request never hangs.
+app.use((err: any, _req: any, res: any, _next: any) => {
+  console.error('[server error]', err);
+  if (!res.headersSent) {
+    res.status(500).json({ error: err?.message || 'Internal server error' });
+  }
 });
