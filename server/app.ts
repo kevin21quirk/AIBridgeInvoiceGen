@@ -217,7 +217,7 @@ app.patch('/api/invoices/:id/status', wrap(async (req, res) => {
   const { status } = req.body;
   const { rows } = await pool.query(
     `UPDATE invoices SET status=$1,
-     paid_date=CASE WHEN $1='paid' THEN NOW() ELSE paid_date END,
+     paid_date=CASE WHEN $1::text='paid' THEN NOW() ELSE paid_date END,
      updated_at=NOW() WHERE id=$2 RETURNING *`,
     [status, req.params.id]
   );
