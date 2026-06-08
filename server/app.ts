@@ -226,7 +226,7 @@ app.patch('/api/invoices/:id/status', wrap(async (req, res) => {
   if (status === 'paid') {
     const existing = await pool.query('SELECT id FROM receipts WHERE invoice_id=$1', [req.params.id]);
     if (!existing.rows.length) {
-      const receiptNumber = await nextReceiptNumber();
+      const receiptNumber = invoice.invoiceNumber.replace('INV-', 'REC-');
       await pool.query(
         `INSERT INTO receipts (receipt_number, invoice_id, amount, payment_method, payment_date, notes)
          VALUES ($1,$2,$3,$4,$5,$6)`,
@@ -317,7 +317,9 @@ app.get('/api/receipts', wrap(async (_req, res) => {
 
 app.post('/api/receipts', wrap(async (req, res) => {
   const { invoiceId, amount, paymentMethod, paymentDate, notes } = req.body;
-  const receiptNumber = await nextReceiptNumber();
+  const { rows: invLookup } = await pool.query('SELECT invoice_number FROM invoices WHERE id=$1', [invoiceId]);
+  if (!invLookup.length) return res.status(404).json({ error: 'Invoice not found' });
+  const receiptNumber = invLookup[0].invoice_number.replace('INV-', 'REC-');
   const { rows } = await pool.query(
     `INSERT INTO receipts (receipt_number, invoice_id, amount, payment_method, payment_date, notes)
      VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
