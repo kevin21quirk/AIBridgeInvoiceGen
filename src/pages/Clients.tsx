@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Mail, Phone, MapPin } from 'lucide-react';
+import { Plus, Edit, Trash2, Mail, Phone, MapPin, AlertTriangle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -12,6 +12,8 @@ export const Clients: React.FC = () => {
   const { clients, addClient, updateClient, deleteClient } = useStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [deletingClient, setDeletingClient] = useState<Client | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     companyName: '',
@@ -87,10 +89,22 @@ export const Clients: React.FC = () => {
     setIsModalOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this client?')) {
-      deleteClient(id);
+  const handleDeleteClick = (client: Client) => {
+    setDeletingClient(client);
+    setDeleteConfirmText('');
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deletingClient && deleteConfirmText === 'DELETE') {
+      deleteClient(deletingClient.id);
+      setDeletingClient(null);
+      setDeleteConfirmText('');
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeletingClient(null);
+    setDeleteConfirmText('');
   };
 
   return (
@@ -138,7 +152,7 @@ export const Clients: React.FC = () => {
                       <Edit size={18} />
                     </button>
                     <button
-                      onClick={() => handleDelete(client.id)}
+                      onClick={() => handleDeleteClick(client)}
                       className="text-red-600 hover:text-red-700"
                     >
                       <Trash2 size={18} />
@@ -180,6 +194,54 @@ export const Clients: React.FC = () => {
           ))}
         </div>
       )}
+
+      {/* Delete confirmation modal */}
+      <Modal
+        isOpen={!!deletingClient}
+        onClose={handleDeleteCancel}
+        title="Delete Client"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-4 bg-red-50 rounded-lg border border-red-200">
+            <AlertTriangle className="text-red-600 mt-0.5 shrink-0" size={20} />
+            <div>
+              <p className="font-medium text-red-800">This action cannot be undone.</p>
+              <p className="text-sm text-red-700 mt-1">
+                You are about to permanently delete <span className="font-semibold">{deletingClient?.name}</span>
+                {deletingClient?.companyName ? ` (${deletingClient.companyName})` : ''}. All associated data will be removed.
+              </p>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Type <span className="font-mono font-bold text-red-600">DELETE</span> to confirm
+            </label>
+            <input
+              type="text"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder="DELETE"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+              autoFocus
+            />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={handleDeleteConfirm}
+              disabled={deleteConfirmText !== 'DELETE'}
+              className="flex-1 px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Delete Client
+            </button>
+            <button
+              onClick={handleDeleteCancel}
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         isOpen={isModalOpen}
