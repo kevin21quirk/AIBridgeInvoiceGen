@@ -8,8 +8,7 @@ import { useStore } from '@/store/useStore';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { COMPANY_DETAILS } from '@/lib/constants';
 import { QuoteStatus } from '@/types';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import html2pdf from 'html2pdf.js';
 
 export const ViewQuote: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -35,40 +34,21 @@ export const ViewQuote: React.FC = () => {
     if (!quoteRef.current) return;
 
     try {
-      const canvas = await html2canvas(quoteRef.current, {
-        scale: 2.5,
-        logging: false,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        imageTimeout: 0,
-      });
+      const opt = {
+        margin: 0,
+        filename: `${quote.quoteNumber}.pdf`,
+        image: { type: 'png' as const, quality: 1 },
+        html2canvas: {
+          scale: 2.5,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          imageTimeout: 0,
+        },
+        jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] as const },
+      };
 
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const pxPerMm = canvas.width / pdfWidth;
-      const pageHeightPx = pdfHeight * pxPerMm;
-
-      let offsetY = 0;
-      let pageIndex = 0;
-      while (offsetY < canvas.height) {
-        const sliceHeight = Math.min(pageHeightPx, canvas.height - offsetY);
-        const sliceCanvas = document.createElement('canvas');
-        sliceCanvas.width = canvas.width;
-        sliceCanvas.height = sliceHeight;
-        const ctx = sliceCanvas.getContext('2d');
-        if (!ctx) return;
-        ctx.drawImage(canvas, 0, offsetY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
-
-        const imgData = sliceCanvas.toDataURL('image/png');
-        if (pageIndex > 0) pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, sliceHeight / pxPerMm);
-
-        offsetY += pageHeightPx;
-        pageIndex++;
-      }
-
-      pdf.save(`${quote.quoteNumber}.pdf`);
+      await html2pdf().set(opt).from(quoteRef.current).save();
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Failed to generate PDF. Please try again.');
