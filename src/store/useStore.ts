@@ -1,10 +1,11 @@
 import { create } from 'zustand';
-import { Client, Invoice, Receipt, RecurringInvoice, InvoiceItem, PaymentStatus } from '@/types';
+import { Client, Invoice, Receipt, RecurringInvoice, Quote, InvoiceItem, PaymentStatus, QuoteStatus } from '@/types';
 import { api } from '@/services/api';
 
 interface Store {
   clients: Client[];
   invoices: Invoice[];
+  quotes: Quote[];
   receipts: Receipt[];
   recurringInvoices: RecurringInvoice[];
   isLoading: boolean;
@@ -23,6 +24,12 @@ interface Store {
   updateInvoiceStatus: (id: string, status: PaymentStatus) => Promise<void>;
   updateUpfrontPaymentStatus: (id: string, paid: boolean) => Promise<void>;
 
+  addQuote: (quote: Omit<Quote, 'id' | 'quoteNumber' | 'createdAt' | 'updatedAt' | 'subtotal' | 'total'>) => Promise<Quote>;
+  updateQuote: (id: string, quote: Partial<Quote>) => Promise<void>;
+  deleteQuote: (id: string) => Promise<void>;
+  getQuote: (id: string) => Quote | undefined;
+  updateQuoteStatus: (id: string, status: QuoteStatus) => Promise<void>;
+
   addRecurringInvoice: (recurring: Omit<RecurringInvoice, 'id' | 'createdAt' | 'updatedAt'>) => Promise<RecurringInvoice>;
   updateRecurringInvoice: (id: string, recurring: Partial<RecurringInvoice>) => Promise<void>;
   deleteRecurringInvoice: (id: string) => Promise<void>;
@@ -39,6 +46,7 @@ interface Store {
 export const useStore = create<Store>()((set, get) => ({
   clients: [],
   invoices: [],
+  quotes: [],
   receipts: [],
   recurringInvoices: [],
   isLoading: false,
@@ -46,13 +54,14 @@ export const useStore = create<Store>()((set, get) => ({
   loadData: async () => {
     set({ isLoading: true });
     try {
-      const [clients, invoices, receipts, recurringInvoices] = await Promise.all([
+      const [clients, invoices, quotes, receipts, recurringInvoices] = await Promise.all([
         api.getClients(),
         api.getInvoices(),
+        api.getQuotes(),
         api.getReceipts(),
         api.getRecurringInvoices(),
       ]);
-      set({ clients, invoices, receipts, recurringInvoices });
+      set({ clients, invoices, quotes, receipts, recurringInvoices });
     } catch (err) {
       console.error('Failed to load data:', err);
     } finally {
@@ -126,6 +135,42 @@ export const useStore = create<Store>()((set, get) => ({
     const invoice = await api.updateUpfrontPayment(id, paid);
     set((state) => ({
       invoices: state.invoices.map((inv) => (inv.id === id ? invoice : inv)),
+    }));
+  },
+
+  // ─── Quotes
+
+  addQuote: async (quoteData) => {
+    const quote = await api.createQuote(quoteData);
+    set((state) => ({ quotes: [quote, ...state.quotes] }));
+    return quote;
+  },
+
+  updateQuote: async (id, updates) => {
+    const quote = await api.updateQuote(id, updates);
+    set((state) => ({
+      quotes: state.quotes.map((q) => (q.id === id ? quote : q)),
+    }));
+  },
+
+  deleteQuote: async (id) => {
+    await api.deleteQuote(id);
+    set((state) => ({ quotes: state.quotes.filter((q) => q.id !== id) }));
+  },
+
+  getQuote: (id) => {
+    const quote = get().quotes.find((q) => q.id === id);
+    if (quote) {
+      const client = get().getClient(quote.clientId);
+      return { ...quote, client };
+    }
+    return undefined;
+  },
+
+  updateQuoteStatus: async (id, status) => {
+    const quote = await api.updateQuoteStatus(id, status);
+    set((state) => ({
+      quotes: state.quotes.map((q) => (q.id === id ? quote : q)),
     }));
   },
 

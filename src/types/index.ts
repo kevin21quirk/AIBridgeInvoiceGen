@@ -97,3 +97,23 @@ export interface CompanyDetails {
     country: string;
   };
 }
+
+export type QuoteStatus = 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired';
+
+export interface Quote {
+  id: string;
+  quoteNumber: string;
+  clientId: string;
+  client?: Client;
+  title?: string;
+  description?: string;
+  items: InvoiceItem[];
+  subtotal: number;
+  total: number;
+  status: QuoteStatus;
+  issueDate: string;
+  validUntil: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}

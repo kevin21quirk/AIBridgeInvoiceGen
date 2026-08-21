@@ -18,6 +18,7 @@ export async function initDb() {
     await client.query(`
       CREATE SEQUENCE IF NOT EXISTS invoice_number_seq START 15001;
       CREATE SEQUENCE IF NOT EXISTS receipt_number_seq START 15001;
+      CREATE SEQUENCE IF NOT EXISTS quote_number_seq START 15001;
 
       CREATE TABLE IF NOT EXISTS clients (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -53,6 +54,23 @@ export async function initDb() {
         upfront_payment_paid BOOLEAN DEFAULT false,
         upfront_payment_date TIMESTAMPTZ,
         recurring_invoice_id UUID,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS quotes (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        quote_number VARCHAR(50) UNIQUE NOT NULL,
+        client_id UUID NOT NULL REFERENCES clients(id) ON DELETE RESTRICT,
+        title VARCHAR(255),
+        description TEXT,
+        status VARCHAR(50) NOT NULL DEFAULT 'draft',
+        items JSONB NOT NULL DEFAULT '[]',
+        subtotal DECIMAL(10,2) NOT NULL DEFAULT 0,
+        total DECIMAL(10,2) NOT NULL DEFAULT 0,
+        issue_date DATE NOT NULL,
+        valid_until DATE NOT NULL,
+        notes TEXT,
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );

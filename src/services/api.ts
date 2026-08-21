@@ -1,4 +1,4 @@
-import { Client, Invoice, Receipt, RecurringInvoice } from '@/types';
+import { Client, Invoice, Receipt, RecurringInvoice, Quote } from '@/types';
 
 const BASE = '/api';
 
@@ -54,6 +54,17 @@ export const api = {
     request<{ success: boolean }>(`/recurring-invoices/${id}`, { method: 'DELETE' }),
   generateInvoiceFromRecurring: (id: string, issueDate: string) =>
     request<Invoice>(`/recurring-invoices/${id}/generate`, { method: 'POST', body: JSON.stringify({ issueDate }) }),
+
+  // Quotes
+  getQuotes: () => request<Quote[]>('/quotes'),
+  createQuote: (data: Omit<Quote, 'id' | 'quoteNumber' | 'createdAt' | 'updatedAt' | 'subtotal' | 'total'>) =>
+    request<Quote>('/quotes', { method: 'POST', body: JSON.stringify(data) }),
+  updateQuote: (id: string, data: Partial<Quote>) =>
+    request<Quote>(`/quotes/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteQuote: (id: string) =>
+    request<{ success: boolean }>(`/quotes/${id}`, { method: 'DELETE' }),
+  updateQuoteStatus: (id: string, status: string) =>
+    request<Quote>(`/quotes/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
 
   // Email
   sendInvoiceEmail: (id: string) =>

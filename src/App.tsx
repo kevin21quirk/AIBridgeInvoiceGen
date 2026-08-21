@@ -6,6 +6,9 @@ import { Invoices } from '@/pages/Invoices';
 import { CreateInvoice } from '@/pages/CreateInvoice';
 import { ViewInvoice } from '@/pages/ViewInvoice';
 import { EditInvoice } from '@/pages/EditInvoice';
+import { Quotes } from '@/pages/Quotes';
+import { CreateQuote } from '@/pages/CreateQuote';
+import { ViewQuote } from '@/pages/ViewQuote';
 import { RecurringInvoices } from '@/pages/RecurringInvoices';
 import { OutstandingPayments } from '@/pages/OutstandingPayments';
 import { Receipts } from '@/pages/Receipts';
@@ -23,6 +26,9 @@ function App() {
           <Route path="/invoices/create" element={<CreateInvoice />} />
           <Route path="/invoices/:id/edit" element={<EditInvoice />} />
           <Route path="/invoices/:id" element={<ViewInvoice />} />
+          <Route path="/quotes" element={<Quotes />} />
+          <Route path="/quotes/create" element={<CreateQuote />} />
+          <Route path="/quotes/:id" element={<ViewQuote />} />
           <Route path="/recurring-invoices" element={<RecurringInvoices />} />
           <Route path="/outstanding-payments" element={<OutstandingPayments />} />
           <Route path="/receipts" element={<Receipts />} />

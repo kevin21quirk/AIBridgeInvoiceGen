@@ -91,6 +91,25 @@ function dbToRecurring(row: any) {
   };
 }
 
+function dbToQuote(row: any) {
+  return {
+    id: row.id,
+    quoteNumber: row.quote_number,
+    clientId: row.client_id,
+    title: row.title || undefined,
+    description: row.description || undefined,
+    status: row.status,
+    items: row.items || [],
+    subtotal: parseFloat(row.subtotal),
+    total: parseFloat(row.total),
+    issueDate: row.issue_date ? new Date(row.issue_date).toISOString().split('T')[0] : '',
+    validUntil: row.valid_until ? new Date(row.valid_until).toISOString().split('T')[0] : '',
+    notes: row.notes || undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 async function nextInvoiceNumber(): Promise<string> {
   const { rows } = await pool.query("SELECT 'INV-' || nextval('invoice_number_seq') AS num");
   return rows[0].num;
@@ -98,6 +117,11 @@ async function nextInvoiceNumber(): Promise<string> {
 
 async function nextReceiptNumber(): Promise<string> {
   const { rows } = await pool.query("SELECT 'REC-' || nextval('receipt_number_seq') AS num");
+  return rows[0].num;
+}
+
+async function nextQuoteNumber(): Promise<string> {
+  const { rows } = await pool.query("SELECT 'QUO-' || nextval('quote_number_seq') AS num");
   return rows[0].num;
 }
 
@@ -306,6 +330,64 @@ app.post('/api/invoices/:id/send-email', wrap(async (req, res) => {
     console.error('Failed to send invoice email:', err);
     res.status(500).json({ error: err.message || 'Failed to send email' });
   }
+}));
+
+// ─── QUOTES
+
+app.get('/api/quotes', wrap(async (_req, res) => {
+  const { rows } = await pool.query('SELECT * FROM quotes ORDER BY created_at DESC');
+  res.json(rows.map(dbToQuote));
+}));
+
+app.post('/api/quotes', wrap(async (req, res) => {
+  const { clientId, title, description, items = [], status = 'draft', issueDate, validUntil, notes } = req.body;
+
+  const quoteNumber = await nextQuoteNumber();
+  const subtotal = items.reduce((s: number, i: any) => s + i.total, 0);
+
+  const { rows } = await pool.query(
+    `INSERT INTO quotes
+       (quote_number, client_id, title, description, status, items, subtotal, total,
+        issue_date, valid_until, notes)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$7,$8,$9,$10) RETURNING *`,
+    [quoteNumber, clientId, title || null, description || null, status, JSON.stringify(items),
+     subtotal, issueDate, validUntil, notes || null]
+  );
+  res.json(dbToQuote(rows[0]));
+}));
+
+app.put('/api/quotes/:id', wrap(async (req, res) => {
+  const { clientId, title, description, items, status, issueDate, validUntil, notes } = req.body;
+  const subtotal = items ? items.reduce((s: number, i: any) => s + i.total, 0) : null;
+  const { rows } = await pool.query(
+    `UPDATE quotes SET
+       client_id=COALESCE($1,client_id), title=COALESCE($2,title), description=COALESCE($3,description),
+       status=COALESCE($4,status), items=COALESCE($5,items),
+       subtotal=COALESCE($6,subtotal), total=COALESCE($6,total),
+       issue_date=COALESCE($7,issue_date), valid_until=COALESCE($8,valid_until),
+       notes=COALESCE($9,notes), updated_at=NOW()
+     WHERE id=$10 RETURNING *`,
+    [clientId || null, title || null, description || null, status || null,
+     items ? JSON.stringify(items) : null, subtotal, issueDate || null,
+     validUntil || null, notes || null, req.params.id]
+  );
+  if (!rows.length) return res.status(404).json({ error: 'Quote not found' });
+  res.json(dbToQuote(rows[0]));
+}));
+
+app.patch('/api/quotes/:id/status', wrap(async (req, res) => {
+  const { status } = req.body;
+  const { rows } = await pool.query(
+    `UPDATE quotes SET status=$1, updated_at=NOW() WHERE id=$2 RETURNING *`,
+    [status, req.params.id]
+  );
+  if (!rows.length) return res.status(404).json({ error: 'Quote not found' });
+  res.json(dbToQuote(rows[0]));
+}));
+
+app.delete('/api/quotes/:id', wrap(async (req, res) => {
+  await pool.query('DELETE FROM quotes WHERE id=$1', [req.params.id]);
+  res.json({ success: true });
 }));
 
 // ─── RECEIPTS ────────────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, FileText, Receipt, Settings, AlertCircle } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, Quote, Receipt, Settings, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { COMPANY_DETAILS } from '@/lib/constants';
 import { useStore } from '@/store/useStore';
@@ -13,6 +13,7 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Clients', href: '/clients', icon: Users },
   { name: 'Invoices', href: '/invoices', icon: FileText },
+  { name: 'Quotes', href: '/quotes', icon: Quote },
   { name: 'Outstanding Payments', href: '/outstanding-payments', icon: AlertCircle },
   { name: 'Receipts', href: '/receipts', icon: Receipt },
   { name: 'Settings', href: '/settings', icon: Settings },

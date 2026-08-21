@@ -1,6 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { PaymentStatus } from '@/types';
+import { PaymentStatus, QuoteStatus } from '@/types';
 
 interface BadgeProps {
   children: React.ReactNode;
@@ -24,14 +24,17 @@ export const Badge: React.FC<BadgeProps> = ({ children, variant = 'default', cla
   );
 };
 
-export const StatusBadge: React.FC<{ status: PaymentStatus }> = ({ status }) => {
-  const statusConfig: Record<PaymentStatus, { variant: BadgeProps['variant']; label: string }> = {
+export const StatusBadge: React.FC<{ status: PaymentStatus | QuoteStatus }> = ({ status }) => {
+  const statusConfig: Record<PaymentStatus | QuoteStatus, { variant: BadgeProps['variant']; label: string }> = {
     draft: { variant: 'default', label: 'Draft' },
     sent: { variant: 'info', label: 'Sent' },
     viewed: { variant: 'info', label: 'Viewed' },
     overdue: { variant: 'danger', label: 'Overdue' },
     paid: { variant: 'success', label: 'Paid' },
     cancelled: { variant: 'default', label: 'Cancelled' },
+    accepted: { variant: 'success', label: 'Accepted' },
+    rejected: { variant: 'danger', label: 'Rejected' },
+    expired: { variant: 'warning', label: 'Expired' },
   };
   
   const config = statusConfig[status];
