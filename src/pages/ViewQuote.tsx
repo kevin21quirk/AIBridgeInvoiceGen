@@ -34,21 +34,48 @@ export const ViewQuote: React.FC = () => {
     if (!quoteRef.current) return;
 
     try {
+      // Clone the element so we can inject page-break CSS without affecting the screen view
+      const clone = quoteRef.current.cloneNode(true) as HTMLElement;
+      clone.style.width = '794px'; // ~A4 width at 96dpi
+      clone.style.padding = '32px';
+      clone.style.background = '#ffffff';
+
+      // Allow all containers to break freely
+      clone.querySelectorAll<HTMLElement>('div, section').forEach((el) => {
+        el.style.pageBreakInside = 'auto';
+        el.style.breakInside = 'auto';
+      });
+
+      // Avoid splitting individual text items
+      clone.querySelectorAll<HTMLElement>('p, li, tr, h1, h2, h3, h4').forEach((el) => {
+        el.style.pageBreakInside = 'avoid';
+        el.style.breakInside = 'avoid';
+      });
+
+      // Keep headings with the content that follows
+      clone.querySelectorAll<HTMLElement>('h1, h2, h3, h4').forEach((el) => {
+        el.style.pageBreakAfter = 'avoid';
+        el.style.breakAfter = 'avoid';
+      });
+
+      document.body.appendChild(clone);
+
       const opt = {
-        margin: 0,
+        margin: [8, 8, 8, 8] as [number, number, number, number],
         filename: `${quote.quoteNumber}.pdf`,
         image: { type: 'png' as const, quality: 1 },
         html2canvas: {
-          scale: 2.5,
+          scale: 2,
           useCORS: true,
           backgroundColor: '#ffffff',
           imageTimeout: 0,
         },
         jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] as const },
+        pagebreak: { mode: ['css'] as const },
       };
 
-      await html2pdf().set(opt).from(quoteRef.current).save();
+      await html2pdf().set(opt).from(clone).save();
+      document.body.removeChild(clone);
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Failed to generate PDF. Please try again.');
