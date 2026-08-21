@@ -34,34 +34,8 @@ export const ViewQuote: React.FC = () => {
     if (!quoteRef.current) return;
 
     try {
-      // Clone the element so we can inject page-break CSS without affecting the screen view
-      const clone = quoteRef.current.cloneNode(true) as HTMLElement;
-      clone.style.width = '794px'; // ~A4 width at 96dpi
-      clone.style.padding = '32px';
-      clone.style.background = '#ffffff';
-
-      // Allow all containers to break freely
-      clone.querySelectorAll<HTMLElement>('div, section').forEach((el) => {
-        el.style.pageBreakInside = 'auto';
-        el.style.breakInside = 'auto';
-      });
-
-      // Avoid splitting individual text items
-      clone.querySelectorAll<HTMLElement>('p, li, tr, h1, h2, h3, h4').forEach((el) => {
-        el.style.pageBreakInside = 'avoid';
-        el.style.breakInside = 'avoid';
-      });
-
-      // Keep headings with the content that follows
-      clone.querySelectorAll<HTMLElement>('h1, h2, h3, h4').forEach((el) => {
-        el.style.pageBreakAfter = 'avoid';
-        el.style.breakAfter = 'avoid';
-      });
-
-      document.body.appendChild(clone);
-
       const opt = {
-        margin: [8, 8, 8, 8] as [number, number, number, number],
+        margin: [12, 12, 12, 12] as [number, number, number, number],
         filename: `${quote.quoteNumber}.pdf`,
         image: { type: 'png' as const, quality: 1 },
         html2canvas: {
@@ -69,13 +43,14 @@ export const ViewQuote: React.FC = () => {
           useCORS: true,
           backgroundColor: '#ffffff',
           imageTimeout: 0,
+          scrollX: 0,
+          scrollY: -window.scrollY,
         },
         jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const },
         pagebreak: { mode: ['css'] as const },
       };
 
-      await html2pdf().set(opt).from(clone).save();
-      document.body.removeChild(clone);
+      await html2pdf().set(opt).from(quoteRef.current).save();
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Failed to generate PDF. Please try again.');
@@ -147,7 +122,7 @@ export const ViewQuote: React.FC = () => {
 
       <Card>
         <CardContent>
-          <div ref={quoteRef} className="bg-white p-8">
+          <div ref={quoteRef} className="bg-white p-8 pdf-quote">
             <div className="flex items-start justify-between mb-8">
               <div className="flex flex-col gap-3">
                 <img
@@ -335,13 +310,20 @@ export const ViewQuote: React.FC = () => {
 
       <style>{`
         @media print {
-          .no-print {
-            display: none !important;
-          }
-          body {
-            margin: 0;
-            padding: 0;
-          }
+          .no-print { display: none !important; }
+          body { margin: 0; padding: 0; }
+        }
+
+        /* Page-break rules picked up by html2pdf.js (css mode) */
+        .pdf-quote li  { page-break-inside: avoid; break-inside: avoid; }
+        .pdf-quote tr  { page-break-inside: avoid; break-inside: avoid; }
+        .pdf-quote h1, .pdf-quote h2, .pdf-quote h3, .pdf-quote h4 {
+          page-break-inside: avoid; break-inside: avoid;
+          page-break-after:  avoid; break-after:  avoid;
+        }
+        /* Containers and paragraphs flow freely so no big gaps appear */
+        .pdf-quote div, .pdf-quote section, .pdf-quote p {
+          page-break-inside: auto; break-inside: auto;
         }
       `}</style>
     </div>
