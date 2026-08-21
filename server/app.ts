@@ -105,6 +105,8 @@ function dbToQuote(row: any) {
     issueDate: row.issue_date ? new Date(row.issue_date).toISOString().split('T')[0] : '',
     validUntil: row.valid_until ? new Date(row.valid_until).toISOString().split('T')[0] : '',
     notes: row.notes || undefined,
+    requiresUpfrontPayment: row.requires_upfront_payment,
+    upfrontPaymentAmount: row.upfront_payment_amount ? parseFloat(row.upfront_payment_amount) : undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -340,36 +342,42 @@ app.get('/api/quotes', wrap(async (_req, res) => {
 }));
 
 app.post('/api/quotes', wrap(async (req, res) => {
-  const { clientId, title, description, items = [], status = 'draft', issueDate, validUntil, notes } = req.body;
+  const { clientId, title, description, items = [], status = 'draft', issueDate, validUntil,
+          notes, requiresUpfrontPayment = false } = req.body;
 
   const quoteNumber = await nextQuoteNumber();
   const subtotal = items.reduce((s: number, i: any) => s + i.total, 0);
+  const upfrontAmount = requiresUpfrontPayment ? subtotal * 0.5 : null;
 
   const { rows } = await pool.query(
     `INSERT INTO quotes
        (quote_number, client_id, title, description, status, items, subtotal, total,
-        issue_date, valid_until, notes)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$7,$8,$9,$10) RETURNING *`,
+        issue_date, valid_until, notes, requires_upfront_payment, upfront_payment_amount)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$7,$8,$9,$10,$11,$12) RETURNING *`,
     [quoteNumber, clientId, title || null, description || null, status, JSON.stringify(items),
-     subtotal, issueDate, validUntil, notes || null]
+     subtotal, issueDate, validUntil, notes || null, requiresUpfrontPayment, upfrontAmount]
   );
   res.json(dbToQuote(rows[0]));
 }));
 
 app.put('/api/quotes/:id', wrap(async (req, res) => {
-  const { clientId, title, description, items, status, issueDate, validUntil, notes } = req.body;
+  const { clientId, title, description, items, status, issueDate, validUntil,
+          notes, requiresUpfrontPayment } = req.body;
   const subtotal = items ? items.reduce((s: number, i: any) => s + i.total, 0) : null;
+  const upfrontAmount = requiresUpfrontPayment && subtotal ? subtotal * 0.5 : null;
   const { rows } = await pool.query(
     `UPDATE quotes SET
        client_id=COALESCE($1,client_id), title=COALESCE($2,title), description=COALESCE($3,description),
        status=COALESCE($4,status), items=COALESCE($5,items),
        subtotal=COALESCE($6,subtotal), total=COALESCE($6,total),
        issue_date=COALESCE($7,issue_date), valid_until=COALESCE($8,valid_until),
-       notes=COALESCE($9,notes), updated_at=NOW()
-     WHERE id=$10 RETURNING *`,
+       notes=COALESCE($9,notes), requires_upfront_payment=COALESCE($10,requires_upfront_payment),
+       upfront_payment_amount=$11, updated_at=NOW()
+     WHERE id=$12 RETURNING *`,
     [clientId || null, title || null, description || null, status || null,
      items ? JSON.stringify(items) : null, subtotal, issueDate || null,
-     validUntil || null, notes || null, req.params.id]
+     validUntil || null, notes || null, requiresUpfrontPayment ?? null,
+     upfrontAmount, req.params.id]
   );
   if (!rows.length) return res.status(404).json({ error: 'Quote not found' });
   res.json(dbToQuote(rows[0]));

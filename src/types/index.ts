@@ -114,6 +114,8 @@ export interface Quote {
   issueDate: string;
   validUntil: string;
   notes?: string;
+  requiresUpfrontPayment: boolean;
+  upfrontPaymentAmount?: number;
   createdAt: string;
   updatedAt: string;
 }

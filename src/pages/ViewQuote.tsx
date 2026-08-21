@@ -36,17 +36,19 @@ export const ViewQuote: React.FC = () => {
 
     try {
       const canvas = await html2canvas(quoteRef.current, {
-        scale: 1.5,
+        scale: 2.5,
         logging: false,
         useCORS: true,
+        backgroundColor: '#ffffff',
+        imageTimeout: 0,
       });
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.82);
+      const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
-      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
       pdf.save(`${quote.quoteNumber}.pdf`);
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -174,7 +176,10 @@ export const ViewQuote: React.FC = () => {
             {quote.description && (
               <div className="mb-8 p-4 bg-gray-50 rounded-lg">
                 <h3 className="text-sm font-semibold text-gray-700 mb-2">Project Description</h3>
-                <p className="text-sm text-gray-900 whitespace-pre-wrap">{quote.description}</p>
+                <div
+                  className="text-sm text-gray-900 rich-text-output"
+                  dangerouslySetInnerHTML={{ __html: quote.description }}
+                />
               </div>
             )}
 
@@ -217,6 +222,25 @@ export const ViewQuote: React.FC = () => {
                     {formatCurrency(quote.total)}
                   </span>
                 </div>
+                {quote.requiresUpfrontPayment && quote.upfrontPaymentAmount && (
+                  <div className="mt-3 pt-3 border-t border-gray-200">
+                    <div className="flex justify-between py-1 text-sm">
+                      <span className="font-semibold text-amber-700">50% Upfront Payment:</span>
+                      <span className="font-bold text-amber-700">
+                        {formatCurrency(quote.upfrontPaymentAmount)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-1 text-sm">
+                      <span className="text-gray-600">Balance on Completion:</span>
+                      <span className="font-medium text-gray-900">
+                        {formatCurrency(quote.total - quote.upfrontPaymentAmount)}
+                      </span>
+                    </div>
+                    <p className="text-xs text-amber-600 mt-1">
+                      A 50% deposit is required before work begins.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 

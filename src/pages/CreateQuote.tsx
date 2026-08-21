@@ -4,6 +4,7 @@ import { Plus, Trash2, ArrowLeft } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { RichTextEditor } from '@/components/RichTextEditor';
 import { useStore } from '@/store/useStore';
 import { InvoiceItem, QuoteStatus } from '@/types';
 import { generateId } from '@/lib/utils';
@@ -21,6 +22,7 @@ export const CreateQuote: React.FC = () => {
     validUntil: addDays(new Date(), 30).toISOString().split('T')[0],
     status: 'draft' as QuoteStatus,
     notes: '',
+    requiresUpfrontPayment: true,
   });
 
   const [items, setItems] = useState<InvoiceItem[]>([
@@ -89,6 +91,7 @@ export const CreateQuote: React.FC = () => {
       issueDate: formData.issueDate,
       validUntil: formData.validUntil,
       notes: formData.notes || undefined,
+      requiresUpfrontPayment: formData.requiresUpfrontPayment,
     });
 
     navigate('/quotes');
@@ -145,12 +148,11 @@ export const CreateQuote: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Description
                     </label>
-                    <textarea
+                    <RichTextEditor
                       value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      rows={5}
+                      onChange={(html) => setFormData({ ...formData, description: html })}
                       placeholder="Provide a detailed description of the work, deliverables, assumptions and scope..."
+                      rows={5}
                     />
                   </div>
 
@@ -187,6 +189,22 @@ export const CreateQuote: React.FC = () => {
                       <option value="rejected">Rejected</option>
                       <option value="expired">Expired</option>
                     </select>
+                  </div>
+
+                  <div className="flex items-start">
+                    <input
+                      type="checkbox"
+                      id="quoteUpfrontPayment"
+                      checked={formData.requiresUpfrontPayment}
+                      onChange={(e) => setFormData({ ...formData, requiresUpfrontPayment: e.target.checked })}
+                      className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="quoteUpfrontPayment" className="ml-2 block text-sm text-gray-700">
+                      <span className="font-medium">Require 50% upfront payment</span>
+                      <p className="text-gray-500 text-xs mt-1">
+                        AI Bridge Solutions requires a 50% deposit before work begins.
+                      </p>
+                    </label>
                   </div>
 
                   <div>
@@ -287,12 +305,26 @@ export const CreateQuote: React.FC = () => {
                     <span className="font-medium text-gray-900">£{subtotal.toFixed(2)}</span>
                   </div>
 
+                  {formData.requiresUpfrontPayment && (
+                    <div className="flex justify-between text-sm text-amber-700">
+                      <span className="font-medium">50% Upfront Payment:</span>
+                      <span className="font-bold">£{(subtotal * 0.5).toFixed(2)}</span>
+                    </div>
+                  )}
+
                   <div className="border-t border-gray-200 pt-3">
                     <div className="flex justify-between">
                       <span className="text-lg font-semibold text-gray-900">Total:</span>
                       <span className="text-lg font-bold text-primary-600">£{subtotal.toFixed(2)}</span>
                     </div>
                   </div>
+
+                  {formData.requiresUpfrontPayment && (
+                    <div className="flex justify-between text-sm text-gray-700 pt-2 border-t border-gray-200">
+                      <span className="font-medium">Balance on Completion:</span>
+                      <span className="font-bold">£{(subtotal * 0.5).toFixed(2)}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-6 space-y-3">

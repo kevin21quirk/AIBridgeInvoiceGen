@@ -71,6 +71,8 @@ export async function initDb() {
         issue_date DATE NOT NULL,
         valid_until DATE NOT NULL,
         notes TEXT,
+        requires_upfront_payment BOOLEAN DEFAULT false,
+        upfront_payment_amount DECIMAL(10,2),
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
@@ -101,6 +103,9 @@ export async function initDb() {
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
+
+      ALTER TABLE quotes ADD COLUMN IF NOT EXISTS requires_upfront_payment BOOLEAN DEFAULT false;
+      ALTER TABLE quotes ADD COLUMN IF NOT EXISTS upfront_payment_amount DECIMAL(10,2);
     `);
     console.log('✅ Database schema ready');
   } finally {
