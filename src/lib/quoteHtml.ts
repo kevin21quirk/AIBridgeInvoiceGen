@@ -131,13 +131,15 @@ export function generateQuoteHtml(quote: Quote, wordFormat = false): string {
 <meta charset="utf-8">
 <title>${esc(quote.quoteNumber)}</title>
 <style>
-  @page { size: A4 portrait; margin: 15mm; }
+  /* margin:0 on @page suppresses the browser's built-in date/URL headers & footers */
+  @page { size: A4 portrait; margin: 0; }
   body {
     font-family: Arial, Helvetica, sans-serif;
     font-size: 10pt;
     color: #111827;
     line-height: 1.5;
     background: white;
+    padding: 15mm;
   }
   ${QUOTE_PDF_CSS}
 </style>
