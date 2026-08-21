@@ -43,12 +43,31 @@ export const ViewQuote: React.FC = () => {
         imageTimeout: 0,
       });
 
-      const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const pxPerMm = canvas.width / pdfWidth;
+      const pageHeightPx = pdfHeight * pxPerMm;
 
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      let offsetY = 0;
+      let pageIndex = 0;
+      while (offsetY < canvas.height) {
+        const sliceHeight = Math.min(pageHeightPx, canvas.height - offsetY);
+        const sliceCanvas = document.createElement('canvas');
+        sliceCanvas.width = canvas.width;
+        sliceCanvas.height = sliceHeight;
+        const ctx = sliceCanvas.getContext('2d');
+        if (!ctx) return;
+        ctx.drawImage(canvas, 0, offsetY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
+
+        const imgData = sliceCanvas.toDataURL('image/png');
+        if (pageIndex > 0) pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, sliceHeight / pxPerMm);
+
+        offsetY += pageHeightPx;
+        pageIndex++;
+      }
+
       pdf.save(`${quote.quoteNumber}.pdf`);
     } catch (error) {
       console.error('Error generating PDF:', error);
